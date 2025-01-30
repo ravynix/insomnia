@@ -1,5 +1,4 @@
 const NodeCache = require('node-cache');
-const logger = require('./logger'); 
 
 // Cache configuration with enhanced settings
 const cache = new NodeCache({
@@ -52,7 +51,7 @@ async function getCachedData(key, options = {}) {
 
     return null;
   } catch (error) {
-    logger.error(`Cache retrieval error for key ${key}:`, error);
+    console.error(`Cache retrieval error for key ${key}:`, error);
     throw error;
   }
 }
@@ -79,11 +78,11 @@ function setCachedData(key, data, ttl, options = {}) {
     const success = cache.set(key, data, ttl || cache.options.stdTTL);
     if (success) {
       cacheStats.sets++;
-      logger.debug(`Cache set for key: ${key}`);
+      console.debug(`Cache set for key: ${key}`);
     }
     return success;
   } catch (error) {
-    logger.error(`Cache set error for key ${key}:`, error);
+    console.error(`Cache set error for key ${key}:`, error);
     throw error;
   }
 }
@@ -106,10 +105,10 @@ function clearHistoricalCache(pattern) {
     cache.del(keysToDelete);
     cacheStats.deletes += deleteCount;
     
-    logger.info(`Cleared ${deleteCount} cache keys${pattern ? ` matching ${pattern}` : ''}`);
+    console.info(`Cleared ${deleteCount} cache keys${pattern ? ` matching ${pattern}` : ''}`);
     return deleteCount;
   } catch (error) {
-    logger.error('Cache clearance error:', error);
+    console.error('Cache clearance error:', error);
     throw error;
   }
 }
