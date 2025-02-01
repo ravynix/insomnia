@@ -92,8 +92,52 @@ function calculateAverageSleepHours(sleepData, options = {}) {
       })
       .sort((a, b) => b.sleepQuality - a.sleepQuality); // Quality descending sort
   }
+
+  function calculateSleepDebt(sleepData, targetHours = 8) {
+    // Calculate total sleep duration from sleep data
+    const totalSleep = sleepData.reduce((acc, entry) => acc + entry.duration, 0);
+    const totalDays = sleepData.length;
+    const idealSleep = totalDays * targetHours;
+    
+    // Return sleep debt (difference between ideal and actual sleep)
+    return idealSleep - totalSleep;
+  }
+  
+  function calculateSleepConsistency(sleepData) {
+    // Extract bedtimes and wake times from sleep data
+    const bedTimes = sleepData.map(entry => new Date(entry.bedTime).getHours());
+    const wakeTimes = sleepData.map(entry => new Date(entry.wakeTime).getHours());
+    
+    // Calculate standard deviation for bedtimes and wake times
+    const bedTimeStdDev = calculateStandardDeviation(bedTimes);
+    const wakeTimeStdDev = calculateStandardDeviation(wakeTimes);
+    
+    return { bedTimeStdDev, wakeTimeStdDev };
+  }
+
+  function generateSleepRecommendations(sleepData) {
+    // Calculate the average sleep duration from the provided sleep data
+    const averageSleep = calculateAverageSleepHours(sleepData);
+    const recommendations = [];
+  
+    // If the average sleep is less than 6 hours, recommend increasing sleep duration
+    if (averageSleep < 6) {
+      recommendations.push('You may not be getting enough sleep. Try to sleep 7-9 hours per night.');
+    }
+  
+    // If any sleep entry has a sleep quality rating below 2, suggest improving sleep habits
+    if (sleepData.some(entry => entry.sleepQuality < 2)) {
+      recommendations.push('Your sleep quality is low. Avoid caffeine before bedtime.');
+    }
+  
+    return recommendations;
+  }
+  
   
   module.exports = {
     calculateAverageSleepHours,
-    applyCustomMetrics
+    applyCustomMetrics,
+    calculateSleepDebt,
+    calculateSleepConsistency,
+    generateSleepRecommendations
   };
