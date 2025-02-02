@@ -18,37 +18,50 @@ let cacheStats = {
 };
 
 /**
+ * Helper function to generate a namespaced key
+ * @param {string} namespace - The cache namespace
+ * @param {string} key - The cache key
+ * @returns {string} Namespaced key
+ */
+function getNamespacedKey(namespace, key) {
+  return `${namespace}:${key}`;
+}
+
+/**
  * Retrieves cached data with enhanced error handling and statistics
  * @param {string} key - Cache key identifier
  * @param {Object} [options] - Retrieval options
  * @param {boolean} [options.refreshTTL=false] - Refresh TTL on access
  * @param {Function} [options.fallback] - Fallback function if cache miss
+ * @param {string} [options.namespace='default'] - Namespace for the cache key
  * @returns {Promise<*>} Cached data or fallback result
  */
 async function getCachedData(key, options = {}) {
   if (!key || typeof key !== 'string') {
     throw new TypeError('Cache key must be a non-empty string');
   }
-
+  
+  const namespacedKey = getNamespacedKey(options.namespace || 'default', key);
+  
   try {
-    const value = cache.get(key);
+    const value = cache.get(namespacedKey);
     
     if (value !== undefined) {
       cacheStats.hits++;
       if (options.refreshTTL) {
-        cache.ttl(key, cache.options.stdTTL);
+        cache.ttl(namespacedKey, cache.options.stdTTL);
       }
       return value;
     }
-
+    
     cacheStats.misses++;
     
     if (options.fallback) {
       const fallbackValue = await options.fallback();
-      await setCachedData(key, fallbackValue);
+      await setCachedData(key, fallbackValue, undefined, { namespace: options.namespace });
       return fallbackValue;
     }
-
+    
     return null;
   } catch (error) {
     console.error(`Cache retrieval error for key ${key}:`, error);
@@ -63,6 +76,7 @@ async function getCachedData(key, options = {}) {
  * @param {number} [ttl] - Custom TTL in seconds
  * @param {Object} [options] - Additional options
  * @param {boolean} [options.overwrite=true] - Overwrite existing key
+ * @param {string} [options.namespace='default'] - Namespace for the cache key
  * @returns {boolean} Operation success status
  */
 function setCachedData(key, data, ttl, options = {}) {
@@ -73,12 +87,14 @@ function setCachedData(key, data, ttl, options = {}) {
   if (data === undefined) {
     throw new Error('Cannot cache undefined value');
   }
+  
+  const namespacedKey = getNamespacedKey(options.namespace || 'default', key);
 
   try {
-    const success = cache.set(key, data, ttl || cache.options.stdTTL);
+    const success = cache.set(namespacedKey, data, ttl || cache.options.stdTTL);
     if (success) {
       cacheStats.sets++;
-      console.debug(`Cache set for key: ${key}`);
+      console.debug(`Cache set for key: ${namespacedKey}`);
     }
     return success;
   } catch (error) {
@@ -88,27 +104,21 @@ function setCachedData(key, data, ttl, options = {}) {
 }
 
 /**
- * Clears cache with optional pattern matching
- * @param {string} [pattern] - Optional key pattern to clear
+ * Clears cache for a specific namespace
+ * @param {string} namespace - Namespace to clear
  * @returns {number} Number of keys deleted
  */
-function clearHistoricalCache(pattern) {
+function clearNamespaceCache(namespace) {
   try {
-    let keysToDelete = cache.keys();
-    
-    if (pattern) {
-      const regex = new RegExp(pattern);
-      keysToDelete = keysToDelete.filter(key => regex.test(key));
-    }
-
+    const keysToDelete = cache.keys().filter(key => key.startsWith(`${namespace}:`));
     const deleteCount = keysToDelete.length;
     cache.del(keysToDelete);
     cacheStats.deletes += deleteCount;
     
-    console.info(`Cleared ${deleteCount} cache keys${pattern ? ` matching ${pattern}` : ''}`);
+    console.info(`Cleared ${deleteCount} cache keys in namespace: ${namespace}`);
     return deleteCount;
   } catch (error) {
-    console.error('Cache clearance error:', error);
+    console.error('Namespace cache clearance error:', error);
     throw error;
   }
 }
@@ -149,7 +159,7 @@ function validateCacheKey(key) {
 module.exports = {
   getCachedData,
   setCachedData,
-  clearHistoricalCache,
+  clearNamespaceCache,
   getCacheStats,
   validateCacheKey
 };
