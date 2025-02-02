@@ -5,6 +5,10 @@ const { getCachedData, setCachedData } = require('./cache');
 
 const API_BASE_URL = process.env.API_BASE_URL;
 
+// =============================
+// Custom Error Classes
+// =============================
+
 /**
  * @classdesc Custom error class for API-related exceptions
  * @extends Error
@@ -21,7 +25,7 @@ class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
     this.type = type;
-    this.status = status || 500;
+    this.status = status || 500; // Default to internal server error
   }
 }
 
@@ -45,55 +49,51 @@ class AuthError extends ApiError {
   }
 }
 
+// =============================
+// API Functions
+// =============================
+
 /**
- * Fetches sleep data for a specific user with caching and rate limiting
- * @async
- * @param {string} userId - UUIDv4 user identifier
- * @param {Object} [options={}] - Additional query parameters
- * @param {string} [options.dateRange] - Date range filter (ISO 8601 format)
- * @param {boolean} [options.includeStages=true] - Include sleep stage details
- * @returns {Promise<Object>} Sleep data object
- * @throws {ApiError} When API request fails
- * @throws {NetworkError} On network connectivity issues
- * @example
- * const data = await fetchUserSleepData('user-123', {
- *   dateRange: '2023-01-01/2023-01-31'
- * });
+ * Fetch user sleep data from the API.
+ * Implements caching to reduce redundant API calls.
+ * 
+ * @param {string} userId - The user ID whose sleep data is being fetched.
+ * @param {Object} options - Optional query parameters for filtering data.
+ * @returns {Promise<Object>} - Returns user sleep data.
  */
 async function fetchUserSleepData(userId, options = {}) {
   try {
+    // Check rate limiting
     if (!checkRateLimit()) throw new ApiError('Rate limit exceeded', 'rate_limit_error', 429);
 
+    // Check cache first to avoid redundant API calls
     const cacheKey = `userSleepData_${userId}`;
     const cachedData = getCachedData(cacheKey);
-    
     if (cachedData?.timestamp > Date.now() - 21600 * 1000) {
       return cachedData.data;
     }
 
+    // Fetch data from API
     const response = await axios.get(`${API_BASE_URL}/sleep/${userId}`, {
       headers: { Authorization: `Bearer ${config.apiKey}` },
       params: { ...config.defaultOptions, ...options },
-      timeout: 10000 // 10-second timeout
+      timeout: 10000
     });
 
+    // Cache the response
     setCachedData(cacheKey, response.data, 21600);
     return response.data;
-
   } catch (error) {
     return handleApiError(error);
   }
 }
 
 /**
- * Retrieves aggregated sleep data for all users
- * @async
- * @param {Object} [options={}] - Filtering and pagination options
- * @param {number} [options.limit=100] - Maximum records to return
- * @param {string} [options.sortBy] - Sorting field (duration|startTime)
- * @returns {Promise<Array<Object>>} Array of sleep records
- * @throws {ApiError} When API request fails
- * @throws {NetworkError} On network connectivity issues
+ * Fetch all sleep data from the API.
+ * Implements caching to improve performance.
+ * 
+ * @param {Object} options - Optional parameters for filtering the results.
+ * @returns {Promise<Object>} - Returns all available sleep data.
  */
 async function fetchAllSleepData(options = {}) {
   try {
@@ -101,7 +101,6 @@ async function fetchAllSleepData(options = {}) {
 
     const cacheKey = 'allSleepData';
     const cachedData = getCachedData(cacheKey);
-    
     if (cachedData?.timestamp > Date.now() - 21600 * 1000) {
       return cachedData.data;
     }
@@ -109,137 +108,113 @@ async function fetchAllSleepData(options = {}) {
     const response = await axios.get(`${API_BASE_URL}/sleep/all`, {
       headers: { Authorization: `Bearer ${config.apiKey}` },
       params: options,
-      timeout: 15000 // 15-second timeout
+      timeout: 15000
     });
 
     setCachedData(cacheKey, response.data, 21600);
     return response.data;
-
   } catch (error) {
     return handleApiError(error);
   }
 }
 
 /**
- * Batch deletion of sleep records with safety confirmation
- * @async
- * @param {Array<string>} idsToDelete - Array of record IDs to delete
- * @param {Object} [options={}] - Additional deletion parameters
- * @param {boolean} [forceDelete=false] - Bypass confirmation prompt
- * @returns {Promise<Object>} Deletion result with status
- * @throws {ApiError} When deletion is cancelled or fails
- * @throws {AuthError} On authorization failures
+ * Update sleep data for a specific record.
+ * 
+ * @param {string} recordId - The ID of the sleep data record to update.
+ * @param {Object} updateFields - Fields to be updated.
+ * @returns {Promise<Object>} - Returns the updated sleep data.
  */
-async function batchDeleteSleepData(idsToDelete, options = {}, forceDelete = false) {
+async function updateSleepData(recordId, updateFields) {
   try {
     if (!checkRateLimit()) throw new ApiError('Rate limit exceeded', 'rate_limit_error', 429);
     
-    if (!forceDelete) {
-      throw new ApiError(
-        'Deletion requires confirmation', 
-        'confirmation_required', 
-        400
-      );
-    }
-
-    const response = await axios.delete(`${API_BASE_URL}/sleep`, {
-      headers: { 
-        Authorization: `Bearer ${config.apiKey}`,
-        'Idempotency-Key': generateIdempotencyKey() 
-      },
-      data: { ids: idsToDelete, ...options },
-      timeout: 20000 // 20-second timeout
+    const response = await axios.put(`${API_BASE_URL}/sleep/${recordId}`, updateFields, {
+      headers: { Authorization: `Bearer ${config.apiKey}` },
+      timeout: 15000
     });
 
-    return {
-      success: true,
-      deletedCount: response.data.deletedCount,
-      warnings: response.data.warnings
-    };
-
+    return response.data;
   } catch (error) {
     return handleApiError(error);
   }
 }
 
 /**
- * Centralized error handler for API operations
- * @private
- * @param {Error} error - Original error object
- * @throws {ApiError|NetworkError|AuthError} Typed error instance
+ * Fetch sleep statistics for a specific user.
+ * 
+ * @param {string} userId - The user ID whose sleep statistics are being fetched.
+ * @returns {Promise<Object>} - Returns the user's sleep statistics.
+ */
+async function fetchUserSleepStats(userId) {
+  try {
+    if (!checkRateLimit()) throw new ApiError('Rate limit exceeded', 'rate_limit_error', 429);
+
+    const response = await axios.get(`${API_BASE_URL}/sleep/stats/${userId}`, {
+      headers: { Authorization: `Bearer ${config.apiKey}` },
+      timeout: 10000
+    });
+
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+// =============================
+// Error Handling
+// =============================
+
+/**
+ * Handle API errors and return appropriate error messages.
+ * 
+ * @param {Error} error - The error object thrown during API calls.
+ * @throws {ApiError} - Returns a structured API error.
  */
 function handleApiError(error) {
-  // Axios-specific errors
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
     const data = error.response?.data;
 
-    switch(status) {
+    switch (status) {
       case 400:
-        throw new ApiError(
-          data?.message || 'Invalid request parameters',
-          'bad_request',
-          status
-        );
-        
+        throw new ApiError(data?.message || 'Invalid request parameters', 'bad_request', status);
       case 401:
         throw new AuthError();
-        
       case 404:
-        throw new ApiError(
-          'Requested resource not found',
-          'not_found',
-          status
-        );
-        
+        throw new ApiError('Requested resource not found', 'not_found', status);
       case 429:
-        throw new ApiError(
-          'Too many requests',
-          'rate_limit_error',
-          status
-        );
-        
+        throw new ApiError('Too many requests', 'rate_limit_error', status);
       default:
-        throw new ApiError(
-          data?.message || `HTTP Error ${status}`,
-          'http_error',
-          status
-        );
+        throw new ApiError(data?.message || `HTTP Error ${status}`, 'http_error', status);
     }
   }
   
+  
+  // Custom API errors
+
   // Custom API errors
   if (error instanceof ApiError) {
     error.stack = error.stack + '\n' + new Error().stack;
     throw error;
   }
 
-  // Network errors
   if (error.code === 'ECONNABORTED') {
     throw new NetworkError();
   }
 
-  // Unknown errors
-  throw new ApiError(
-    error.message || 'Unknown API error',
-    'unknown_error',
-    500
-  );
+  throw new ApiError(error.message || 'Unknown API error', 'unknown_error', 500);
 }
 
-/**
- * Generates unique idempotency key for write operations
- * @private
- * @returns {string} Base64-encoded unique key
- */
-function generateIdempotencyKey() {
-  return Buffer.from(Date.now().toString() + Math.random().toString()).toString('base64');
-}
+// =============================
+// Module Exports
+// =============================
 
 module.exports = {
   fetchUserSleepData,
   fetchAllSleepData,
-  batchDeleteSleepData,
+  updateSleepData,
+  fetchUserSleepStats,
   ApiError,
   NetworkError,
   AuthError
