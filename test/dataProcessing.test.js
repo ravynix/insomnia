@@ -1,10 +1,10 @@
-const { calculateAverageSleepHours, applyCustomMetrics } = require('./dataProcessing');
+const { calculateAverageSleepHours, applyCustomMetrics, calculateSleepDebt, calculateSleepConsistency, generateSleepRecommendations } = require('./dataProcessing');
 
 describe('Data Processing', () => {
   const testData = [
-    { duration: 6, sleepQuality: 3 },
-    { duration: 7, sleepQuality: 4 },
-    { duration: 8, sleepQuality: 5 }
+    { duration: 6, sleepQuality: 3, bedTime: '2024-02-01T22:00:00Z', wakeTime: '2024-02-02T06:00:00Z' },
+    { duration: 7, sleepQuality: 4, bedTime: '2024-02-02T23:00:00Z', wakeTime: '2024-02-03T07:00:00Z' },
+    { duration: 8, sleepQuality: 5, bedTime: '2024-02-03T21:30:00Z', wakeTime: '2024-02-04T05:30:00Z' }
   ];
 
   describe('calculateAverageSleepHours', () => {
@@ -43,5 +43,26 @@ describe('Data Processing', () => {
       expect(() => applyCustomMetrics(testData, { minQuality: 'invalid' })).toThrow();
     });
   });
-});
 
+  describe('calculateSleepDebt', () => {
+    test('should calculate correct sleep debt', () => {
+      const debt = calculateSleepDebt(testData, 8);
+      expect(debt).toBeCloseTo(3.0); // Ideal: 24, Actual: 21
+    });
+  });
+
+  describe('calculateSleepConsistency', () => {
+    test('should compute consistency metrics', () => {
+      const consistency = calculateSleepConsistency(testData);
+      expect(consistency).toHaveProperty('bedTimeStdDev');
+      expect(consistency).toHaveProperty('wakeTimeStdDev');
+    });
+  });
+
+  describe('generateSleepRecommendations', () => {
+    test('should suggest improvements if sleep is insufficient', () => {
+      const recommendations = generateSleepRecommendations(testData);
+      expect(Array.isArray(recommendations)).toBe(true);
+    });
+  });
+});
