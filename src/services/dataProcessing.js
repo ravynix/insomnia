@@ -161,6 +161,56 @@ function generateSleepReport(sleepData, targetHours = 8) {
   };
 }
 
+/**
+   * Calculates the variance and standard deviation of sleep durations.
+   * @param {Array<Object>} sleepData - Array of sleep entries
+   * @returns {Object} An object containing the variance and standard deviation of sleep durations.
+   * @throws {Error} If sleepData is not an array or contains no valid duration entries.
+   */
+function calculateSleepDurationStats(sleepData) {
+  if (!Array.isArray(sleepData)) {
+    throw new TypeError('Sleep data must be an array');
+  }
+  
+  const durations = sleepData
+    .filter(entry => typeof entry?.duration === 'number' && entry.duration > 0)
+    .map(entry => entry.duration);
+  
+  if (durations.length === 0) {
+    throw new Error('No valid sleep durations found');
+  }
+  
+  const mean = durations.reduce((acc, d) => acc + d, 0) / durations.length;
+  const variance = durations.reduce((acc, d) => acc + Math.pow(d - mean, 2), 0) / durations.length;
+  const stdDev = Math.sqrt(variance);
+  
+  return { variance: Number(variance.toFixed(2)), stdDev: Number(stdDev.toFixed(2)) };
+}
+
+/**
+ * Analyzes the frequency distribution of sleep stages across the dataset.
+ * @param {Array<Object>} sleepData - Array of sleep entries
+ * @returns {Object} An object mapping each sleep stage to its occurrence count.
+ * @throws {Error} If sleepData is not an array.
+ */
+function analyzeSleepStages(sleepData) {
+  if (!Array.isArray(sleepData)) {
+    throw new TypeError('Sleep data must be an array');
+  }
+  
+  const stageFrequency = {};
+  
+  sleepData.forEach(entry => {
+    if (Array.isArray(entry.sleepStages)) {
+      entry.sleepStages.forEach(stage => {
+        stageFrequency[stage] = (stageFrequency[stage] || 0) + 1;
+      });
+    }
+  });
+  
+  return stageFrequency;
+}
+
 module.exports = {
   calculateAverageSleepHours,
   applyCustomMetrics,
