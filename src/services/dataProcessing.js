@@ -217,5 +217,6 @@ module.exports = {
   calculateSleepDebt,
   calculateSleepConsistency,
   generateSleepRecommendations,
-  generateSleepReport  // Newly added feature
+  generateSleepReport,
+  calculateSleepDurationStats
 };
