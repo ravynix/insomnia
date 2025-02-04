@@ -9,6 +9,25 @@ const API_BASE_URL = process.env.API_BASE_URL;
 // Custom Error Classes
 // =============================
 
+
+/**
+ * Retry function for API requests.
+ * Tries the request up to `maxRetries` times before throwing an error.
+ * 
+ * @param {Function} fn - The function to execute.
+ * @param {number} retries - Number of retries before failing.
+ * @returns {Promise<Object>} - Resolves with the API response.
+ */
+async function retryRequest(fn, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (i === retries - 1) throw error;
+    }
+  }
+}
+
 /**
  * @classdesc Custom error class for API-related exceptions
  * @extends Error
@@ -99,17 +118,20 @@ async function fetchAllSleepData(options = {}) {
   try {
     if (!checkRateLimit()) throw new ApiError('Rate limit exceeded', 'rate_limit_error', 429);
 
-    const cacheKey = 'allSleepData';
+    const { page = 1, limit = 10, ...filters } = options;
+    const cacheKey = `allSleepData_page${page}_limit${limit}`;
     const cachedData = getCachedData(cacheKey);
     if (cachedData?.timestamp > Date.now() - 21600 * 1000) {
       return cachedData.data;
     }
 
-    const response = await axios.get(`${API_BASE_URL}/sleep/all`, {
-      headers: { Authorization: `Bearer ${config.apiKey}` },
-      params: options,
-      timeout: 15000
-    });
+    const response = await retryRequest(() =>
+      axios.get(`${API_BASE_URL}/sleep/all`, {
+        headers: { Authorization: `Bearer ${config.apiKey}` },
+        params: { page, limit, ...filters },
+        timeout: 15000
+      })
+    );
 
     setCachedData(cacheKey, response.data, 21600);
     return response.data;
@@ -206,6 +228,30 @@ function handleApiError(error) {
   throw new ApiError(error.message || 'Unknown API error', 'unknown_error', 500);
 }
 
+/**
+ * Delete sleep data by record ID.
+ * 
+ * @param {string} recordId - The ID of the sleep data record to delete.
+ * @returns {Promise<Object>} - Returns a success message.
+ */
+async function deleteSleepData(recordId) {
+  try {
+    if (!checkRateLimit()) throw new ApiError('Rate limit exceeded', 'rate_limit_error', 429);
+    
+    await retryRequest(() =>
+      axios.delete(`${API_BASE_URL}/sleep/${recordId}`, {
+        headers: { Authorization: `Bearer ${config.apiKey}` },
+        timeout: 15000
+      })
+    );
+    
+    return { message: 'Sleep data successfully deleted' };
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+
 // =============================
 // Module Exports
 // =============================
@@ -215,6 +261,7 @@ module.exports = {
   fetchAllSleepData,
   updateSleepData,
   fetchUserSleepStats,
+  deleteSleepData,
   ApiError,
   NetworkError,
   AuthError
