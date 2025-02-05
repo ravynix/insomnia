@@ -124,6 +124,24 @@ function clearNamespaceCache(namespace) {
 }
 
 /**
+ * Function to clear all expired cache entries.
+ * This function iterates over all keys in the cache and deletes those that have expired.
+ * It also updates the cache statistics for the number of deletions.
+ */
+function clearExpiredCache() {
+  cache.keys((err, keys) => {
+    if (!err) {
+      keys.forEach(key => {
+        if (cache.getTtl(key) && cache.getTtl(key) < Date.now()) {
+          cache.del(key);
+          cacheStats.deletes++;
+        }
+      });
+    }
+  });
+}
+
+/**
  * Retrieves cache statistics and health metrics
  * @returns {Object} Cache performance and health data
  */
@@ -160,6 +178,7 @@ module.exports = {
   getCachedData,
   setCachedData,
   clearNamespaceCache,
+  clearExpiredCache,
   getCacheStats,
   validateCacheKey
 };
