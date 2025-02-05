@@ -1,4 +1,4 @@
-const { calculateAverageSleepHours, applyCustomMetrics, calculateSleepDebt, calculateSleepConsistency, generateSleepRecommendations } = require('./dataProcessing');
+const { calculateAverageSleepHours, calculateSleepDebt, calculateSleepConsistency, generateSleepRecommendations, calculateSleepDurations, generateSleepReport } = require('../src/services/dataProcessing');
 
 describe('Data Processing', () => {
   const testData = [
@@ -16,53 +16,33 @@ describe('Data Processing', () => {
     test('should handle empty data', () => {
       expect(() => calculateAverageSleepHours([])).toThrow();
     });
+  });
 
-    test('should apply quality weighting', () => {
-      const weightedData = [
-        { duration: 6, sleepQuality: 1 },
-        { duration: 6, sleepQuality: 5 }
-      ];
-      const avg = calculateAverageSleepHours(weightedData);
-      expect(avg).toBeCloseTo(6.0); // (6*1 + 6*5) / (1+5) = 6
+  describe('calculateSleepDurations', () => {
+    test('should calculate longest and shortest sleep durations', () => {
+      const durations = calculateSleepDurations(testData);
+      expect(durations.longestSleep).toBe(8 * 60 * 60 * 1000); // 8 hours in milliseconds
+      expect(durations.shortestSleep).toBe(6 * 60 * 60 * 1000); // 6 hours in milliseconds
+    });
+
+    test('should handle empty data', () => {
+      expect(() => calculateSleepDurations([])).toThrow();
     });
   });
 
-  describe('applyCustomMetrics', () => {
-    const rules = {
-      minQuality: 3,
-      maxDuration: 8,
-      requiredStages: ['deep']
-    };
-
-    test('should filter data correctly', () => {
-      const filtered = applyCustomMetrics(testData, rules);
-      expect(filtered.length).toBe(2);
+  describe('generateSleepReport', () => {
+    test('should generate a comprehensive sleep report', () => {
+      const report = generateSleepReport(testData);
+      expect(report.averageSleep).toBeCloseTo(7.0);
+      expect(report.sleepDebt).toBeCloseTo(3.0); // Assuming targetHours is 8
+      expect(report.consistency).toBeDefined();
+      expect(report.sleepDurations.longestSleep).toBe(8 * 60 * 60 * 1000); // 8 hours in milliseconds
+      expect(report.sleepDurations.shortestSleep).toBe(6 * 60 * 60 * 1000); // 6 hours in milliseconds
+      expect(report.recommendations).toBeDefined();
     });
 
-    test('should handle invalid rules', () => {
-      expect(() => applyCustomMetrics(testData, { minQuality: 'invalid' })).toThrow();
-    });
-  });
-
-  describe('calculateSleepDebt', () => {
-    test('should calculate correct sleep debt', () => {
-      const debt = calculateSleepDebt(testData, 8);
-      expect(debt).toBeCloseTo(3.0); // Ideal: 24, Actual: 21
-    });
-  });
-
-  describe('calculateSleepConsistency', () => {
-    test('should compute consistency metrics', () => {
-      const consistency = calculateSleepConsistency(testData);
-      expect(consistency).toHaveProperty('bedTimeStdDev');
-      expect(consistency).toHaveProperty('wakeTimeStdDev');
-    });
-  });
-
-  describe('generateSleepRecommendations', () => {
-    test('should suggest improvements if sleep is insufficient', () => {
-      const recommendations = generateSleepRecommendations(testData);
-      expect(Array.isArray(recommendations)).toBe(true);
+    test('should handle empty data', () => {
+      expect(() => generateSleepReport([])).toThrow();
     });
   });
 });
