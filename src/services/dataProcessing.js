@@ -150,6 +150,9 @@ function generateSleepReport(sleepData, targetHours = 8) {
   // Calculate sleep consistency (standard deviation for bed and wake times)
   const consistency = calculateSleepConsistency(sleepData);
   
+  // Calculate longest and shortest sleep durations
+  const sleepDurations = calculateSleepDurations(sleepData);
+  
   // Generate personalized sleep recommendations
   const recommendations = generateSleepRecommendations(sleepData);
   
@@ -157,6 +160,7 @@ function generateSleepReport(sleepData, targetHours = 8) {
     averageSleep,
     sleepDebt,
     consistency,
+    sleepDurations,
     recommendations
   };
 }
@@ -211,6 +215,35 @@ function analyzeSleepStages(sleepData) {
   return stageFrequency;
 }
 
+/**
+ * Calculates the longest and shortest sleep durations from the sleep data.
+ * @param {Array<Object>} sleepData - Array of sleep entries
+ * @returns {Object} An object containing the longest and shortest sleep durations.
+ */
+function calculateSleepDurations(sleepData) {
+  if (!Array.isArray(sleepData) || sleepData.length === 0) {
+    throw new Error('Invalid sleep data');
+  }
+
+  let longestSleep = 0;
+  let shortestSleep = Infinity;
+
+  sleepData.forEach(entry => {
+    const sleepDuration = entry.sleepEnd - entry.sleepStart;
+    if (sleepDuration > longestSleep) {
+      longestSleep = sleepDuration;
+    }
+    if (sleepDuration < shortestSleep) {
+      shortestSleep = sleepDuration;
+    }
+  });
+
+  return {
+    longestSleep,
+    shortestSleep
+  };
+}
+
 module.exports = {
   calculateAverageSleepHours,
   applyCustomMetrics,
@@ -218,5 +251,6 @@ module.exports = {
   calculateSleepConsistency,
   generateSleepRecommendations,
   generateSleepReport,
-  calculateSleepDurationStats
+  calculateSleepDurationStats,
+  calculateSleepDurations
 };
