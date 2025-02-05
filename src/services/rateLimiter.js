@@ -1,6 +1,7 @@
 const config = require('../config/index');
 const logger = require('./logger'); // Assuming you have a logger utility
 const fs = require('fs');
+const path = require('path');
 
 // Enhanced rate limiter with logging to file
 const rateLimiterState = {
@@ -40,13 +41,8 @@ function checkRateLimit(identifier) {
 
   if (rateLimiterState.blockedUntil && currentTime < rateLimiterState.blockedUntil) {
     rateLimiterState.stats.blockedRequests++;
-    logRateLimiterEvent(`BLOCKED: ${identifier || 'default'}`);
-    return {
-      allowed: false,
-      remaining: 0,
-      reset: rateLimiterState.blockedUntil - currentTime,
-      retryAfter: rateLimiterState.blockedUntil - currentTime
-    };
+    logRateLimiterEvent(`Blocked request from ${identifier}`);
+    return { blocked: true, retryAfter: rateLimiterState.blockedUntil - currentTime };
   }
 
   if (currentTime - rateLimiterState.lastResetTime > RATE_LIMITER_CONFIG.windowSize) {
@@ -123,8 +119,27 @@ function getRateLimiterStats() {
   };
 }
 
+/**
+ * Cleans up old log entries older than the specified number of days
+ * @param {number} days - Number of days to retain logs
+ */
+function cleanOldLogs(days = 30) {
+  const logFilePath = path.join(__dirname, 'rate_limiter.log');
+  const logFileContent = fs.readFileSync(logFilePath, 'utf-8');
+  const logEntries = logFileContent.split('\n').filter(entry => entry.trim() !== '');
+
+  const cutoffTime = Date.now() - days * 24 * 60 * 60 * 1000;
+  const filteredEntries = logEntries.filter(entry => {
+    const logDate = new Date(entry.substring(1, 25)).getTime();
+    return logDate >= cutoffTime;
+  });
+
+  fs.writeFileSync(logFilePath, filteredEntries.join('\n') + '\n');
+}
+
 module.exports = {
   checkRateLimit,
   resetRateLimiter,
-  getRateLimiterStats
+  getRateLimiterStats,
+  cleanOldLogs
 };
