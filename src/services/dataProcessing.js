@@ -153,6 +153,9 @@ function generateSleepReport(sleepData, targetHours = 8) {
   // Calculate longest and shortest sleep durations
   const sleepDurations = calculateSleepDurations(sleepData);
   
+  // Calculate total sleep duration
+  const totalSleepDuration = calculateTotalSleepDuration(sleepData);
+  
   // Generate personalized sleep recommendations
   const recommendations = generateSleepRecommendations(sleepData);
   
@@ -161,6 +164,7 @@ function generateSleepReport(sleepData, targetHours = 8) {
     sleepDebt,
     consistency,
     sleepDurations,
+    totalSleepDuration,
     recommendations
   };
 }
@@ -244,6 +248,22 @@ function calculateSleepDurations(sleepData) {
   };
 }
 
+/**
+ * Calculates the total sleep duration from the sleep data.
+ * @param {Array<Object>} sleepData - Array of sleep entries
+ * @returns {number} The total sleep duration in milliseconds.
+ */
+function calculateTotalSleepDuration(sleepData) {
+  if (!Array.isArray(sleepData) || sleepData.length === 0) {
+    throw new Error('Invalid sleep data');
+  }
+
+  return sleepData.reduce((total, entry) => {
+    const sleepDuration = entry.sleepEnd - entry.sleepStart;
+    return total + sleepDuration;
+  }, 0);
+}
+
 module.exports = {
   calculateAverageSleepHours,
   applyCustomMetrics,
@@ -252,5 +272,6 @@ module.exports = {
   generateSleepRecommendations,
   generateSleepReport,
   calculateSleepDurationStats,
-  calculateSleepDurations
+  calculateSleepDurations,
+  calculateTotalSleepDuration
 };
