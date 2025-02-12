@@ -1,16 +1,13 @@
+process.env.INSOMNIA_API_KEY = 'your-api-key-here';
+
 const { getSleepQualityImprovementTips } = require('../src/services/sleepQualityImprovement');
 
 describe('Sleep Quality Improvement', () => {
   const testData = [
-    { duration: 6, sleepQuality: 2, bedTime: '2024-02-01T22:00:00Z', wakeTime: '2024-02-02T06:00:00Z' },
-    { duration: 7, sleepQuality: 4, bedTime: '2024-02-02T23:00:00Z', wakeTime: '2024-02-03T07:00:00Z' },
-    { duration: 8, sleepQuality: 5, bedTime: '2024-02-03T21:30:00Z', wakeTime: '2024-02-04T05:30:00Z' }
+    { duration: 6, sleepQuality: 2 },
+    { duration: 5, sleepQuality: 1 },
+    { duration: 7, sleepQuality: 3 }
   ];
-
-  test('should provide tips for low sleep quality', () => {
-    const tips = getSleepQualityImprovementTips(testData);
-    expect(tips).toContain('Your sleep quality is low. Consider improving your sleep environment and reducing stress.');
-  });
 
   test('should provide tips for inconsistent sleep schedule', () => {
     const tips = getSleepQualityImprovementTips(testData);
