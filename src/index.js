@@ -4,44 +4,60 @@ const config = require('./config/index');
 const { 
   fetchUserSleepData, 
   fetchAllSleepData, 
-  batchDeleteSleepData 
+  updateSleepData,
+  fetchUserSleepStats,
+  deleteSleepData
 } = require('./services/sleepData');
 const { 
   calculateAverageSleepHours,
-  applyCustomMetrics
+  applyCustomMetrics,
+  calculateSleepDebt,
+  calculateSleepConsistency,
+  generateSleepRecommendations,
+  generateSleepReport,
+  calculateSleepDurationStats,
+  calculateSleepDurations,
+  calculateTotalSleepDuration
 } = require('./services/dataProcessing');
 const { 
-  clearHistoricalCache,
-  getCacheStats
+  clearNamespaceCache,
+  getCacheStats,
+  validateCacheKey
 } = require('./services/cache');
 const logger = require('./utils/logger');
-const { validateConfig } = require('./config/validator');
 
 // SDK State Management
 let isInitialized = false;
 let sdkInstance = null;
 
 /**
- * Core SDK Class dengan encapsulation dan safety mechanisms
+ * Core SDK Class with encapsulation and safety mechanisms
  */
 class SleepSDK {
   constructor() {
-    if (!isInitialized) {
-      throw new Error('SDK must be initialized before use');
-    }
-
-    // Bind methods untuk maintain context
+    // Removed the check here because initialization is ensured before instantiation.
+    // Bind methods to maintain context
     this.fetchUserSleepData = this._wrapWithErrorHandling(fetchUserSleepData);
     this.fetchAllSleepData = this._wrapWithErrorHandling(fetchAllSleepData);
-    this.batchDeleteSleepData = this._wrapWithErrorHandling(batchDeleteSleepData, true);
+    this.updateSleepData = this._wrapWithErrorHandling(updateSleepData);
+    this.fetchUserSleepStats = this._wrapWithErrorHandling(fetchUserSleepStats);
+    this.deleteSleepData = this._wrapWithErrorHandling(deleteSleepData);
     this.calculateAverageSleepHours = calculateAverageSleepHours;
     this.applyCustomMetrics = applyCustomMetrics;
-    this.clearHistoricalCache = clearHistoricalCache;
+    this.calculateSleepDebt = calculateSleepDebt;
+    this.calculateSleepConsistency = calculateSleepConsistency;
+    this.generateSleepRecommendations = generateSleepRecommendations;
+    this.generateSleepReport = generateSleepReport;
+    this.calculateSleepDurationStats = calculateSleepDurationStats;
+    this.calculateSleepDurations = calculateSleepDurations;
+    this.calculateTotalSleepDuration = calculateTotalSleepDuration;
+    this.clearNamespaceCache = clearNamespaceCache;
     this.getCacheStats = getCacheStats;
+    this.validateCacheKey = validateCacheKey;
   }
 
   /**
-   * Error handling wrapper untuk SDK methods
+   * Error handling wrapper for SDK methods
    * @private
    */
   _wrapWithErrorHandling(fn, isAdmin = false) {
@@ -66,7 +82,7 @@ class SleepSDK {
   }
 
   /**
-   * Format error response untuk konsistensi
+   * Error response format for consistency
    * @private
    */
   _formatError(error) {
@@ -80,31 +96,23 @@ class SleepSDK {
 }
 
 /**
- * Initialize SDK dengan konfigurasi
- * @param {Object} [userConfig] - Konfigurasi tambahan pengguna
+ * Initialize SDK with configuration
+ * @param {Object} [userConfig] - Additional user configuration
  */
 async function initialize(userConfig = {}) {
   try {
-    // Validasi environment variables
-    validateConfig();
-    
-    // Merge configuration
-    config.merge(userConfig);
-    
-    // Init logging system
-    logger.init(config.logging);
 
     // Warm-up cache
     if (config.cache.preload) {
       await warmUpCache();
     }
 
+    // Set initialized flag before creating SDK instance to prevent constructor error
+    isInitialized = true;
     // Create SDK instance
     sdkInstance = Object.freeze(new SleepSDK());
-    isInitialized = true;
 
     logger.info(`🟢 SDK Initialized in ${config.environment} mode`);
-    logger.debug('Runtime Configuration:', config.getPublicConfig());
 
     return sdkInstance;
   } catch (error) {
@@ -114,7 +122,7 @@ async function initialize(userConfig = {}) {
 }
 
 /**
- * Warm-up cache untuk performa awal
+ * Warm-up cache for initial performance
  */
 async function warmUpCache() {
   try {
@@ -128,7 +136,7 @@ async function warmUpCache() {
 }
 
 /**
- * Get SDK instance dengan safety check
+ * Get SDK instance with safety check 
  */
 function getSDK() {
   if (!isInitialized) {

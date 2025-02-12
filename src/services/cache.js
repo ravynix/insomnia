@@ -24,6 +24,10 @@ let cacheStats = {
  * @returns {string} Namespaced key
  */
 function getNamespacedKey(namespace, key) {
+  // If key already contains a colon, assume it is already namespaced.
+  if (key.includes(':')) {
+    return key;
+  }
   return `${namespace}:${key}`;
 }
 
@@ -129,14 +133,12 @@ function clearNamespaceCache(namespace) {
  * It also updates the cache statistics for the number of deletions.
  */
 function clearExpiredCache() {
-  cache.keys((err, keys) => {
-    if (!err) {
-      keys.forEach(key => {
-        if (cache.getTtl(key) && cache.getTtl(key) < Date.now()) {
-          cache.del(key);
-          cacheStats.deletes++;
-        }
-      });
+  // NodeCache.keys() is synchronous; iterate over keys to check TTL.
+  const keys = cache.keys();
+  keys.forEach(key => {
+    if (cache.getTtl(key) && cache.getTtl(key) < Date.now()) {
+      cache.del(key);
+      cacheStats.deletes++;
     }
   });
 }
