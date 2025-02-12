@@ -4,6 +4,7 @@ const { checkRateLimit } = require('./rateLimiter');
 const { getCachedData, setCachedData } = require('./cache');
 
 const API_BASE_URL = process.env.API_BASE_URL;
+const API_KEY = process.env.API_KEY;
 
 // =============================
 // Custom Error Classes
@@ -94,7 +95,7 @@ async function fetchUserSleepData(userId, options = {}) {
 
     // Fetch data from API
     const response = await axios.get(`${API_BASE_URL}/sleep/${userId}`, {
-      headers: { Authorization: `Bearer ${config.apiKey}` },
+      headers: { Authorization: `Bearer ${API_KEY}` },
       params: { ...config.defaultOptions, ...options },
       timeout: 10000
     });
@@ -127,7 +128,7 @@ async function fetchAllSleepData(options = {}) {
 
     const response = await retryRequest(() =>
       axios.get(`${API_BASE_URL}/sleep/all`, {
-        headers: { Authorization: `Bearer ${config.apiKey}` },
+        headers: { Authorization: `Bearer ${API_KEY}` },
         params: { page, limit, ...filters },
         timeout: 15000
       })
@@ -152,7 +153,7 @@ async function updateSleepData(recordId, updateFields) {
     if (!checkRateLimit()) throw new ApiError('Rate limit exceeded', 'rate_limit_error', 429);
     
     const response = await axios.put(`${API_BASE_URL}/sleep/${recordId}`, updateFields, {
-      headers: { Authorization: `Bearer ${config.apiKey}` },
+      headers: { Authorization: `Bearer ${API_KEY}` },
       timeout: 15000
     });
 
@@ -173,7 +174,7 @@ async function fetchUserSleepStats(userId) {
     if (!checkRateLimit()) throw new ApiError('Rate limit exceeded', 'rate_limit_error', 429);
 
     const response = await axios.get(`${API_BASE_URL}/sleep/stats/${userId}`, {
-      headers: { Authorization: `Bearer ${config.apiKey}` },
+      headers: { Authorization: `Bearer ${API_KEY}` },
       timeout: 10000
     });
 
@@ -237,10 +238,10 @@ function handleApiError(error) {
 async function deleteSleepData(recordId) {
   try {
     if (!checkRateLimit()) throw new ApiError('Rate limit exceeded', 'rate_limit_error', 429);
-    
+    console.log("ini api key : "+ API_KEY)
     await retryRequest(() =>
       axios.delete(`${API_BASE_URL}/sleep/${recordId}`, {
-        headers: { Authorization: `Bearer ${config.apiKey}` },
+        headers: { Authorization: `Bearer ${API_KEY}` },
         timeout: 15000
       })
     );
