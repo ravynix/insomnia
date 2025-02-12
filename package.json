@@ -1,6 +1,6 @@
 {
   "name": "insomnia",
-  "version": "1.0.0",
+  "version": "0.0.9",
   "description": "A robust SDK enabling Insomnia to securely fetch, process, and integrate user sleep data into their own platforms. This SDK requires a unique API key—issued upon official partnership—and provides configurable data handling options to tailor the integration to your specific needs.",
   "main": "index.js",
   "scripts": {
