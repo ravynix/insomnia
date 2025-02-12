@@ -4,15 +4,21 @@
   "description": "A robust SDK enabling Insomnia to securely fetch, process, and integrate user sleep data into their own platforms. This SDK requires a unique API key—issued upon official partnership—and provides configurable data handling options to tailor the integration to your specific needs.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
-  "author": "james",
+  "author": "ravynix",
   "license": "ISC",
   "dependencies": {
     "axios": "^1.7.9",
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.4.7",
+    "node-cache": "^5.1.2"
   },
   "devDependencies": {
-    "jest": "^29.7.0"
+    "@babel/core": "^7.26.8",
+    "@babel/preset-env": "^7.26.8",
+    "@babel/register": "^7.25.9",
+    "chai": "^5.1.2",
+    "jest": "^29.7.0",
+    "mocha": "^11.1.0"
   }
 }

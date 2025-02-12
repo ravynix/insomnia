@@ -1,11 +1,11 @@
-const { initialize, getSDK } = require('./index');
+const { initialize, getSDK } = require('../src/index');
 
 describe('SDK', () => {
   beforeAll(async () => {
     await initialize({ environment: 'test' });
   });
 
-  test('should initialize correctly', () => {
+  test('should initialize SDK correctly', () => {
     const sdk = getSDK();
     expect(sdk).toHaveProperty('fetchUserSleepData');
     expect(sdk).toHaveProperty('calculateAverageSleepHours');
@@ -13,7 +13,7 @@ describe('SDK', () => {
 
   test('should prevent uninitialized access', () => {
     jest.resetModules();
-    const { getSDK } = require('./index');
+    const { getSDK } = require('../src/index');
     expect(() => getSDK()).toThrow('Call initialize() first');
   });
 });
